@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rebuild Digital Labs – Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #020810;
+  --bg2: #050f1e;
+  --cyan: #00e5ff;
+  --blue: #0066ff;
+  --violet: #7000ff;
+  --white: #f0f8ff;
+  --gray: #8899aa;
+  --glow: 0 0 30px rgba(0,229,255,0.4);
+  --glow2: 0 0 60px rgba(0,102,255,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  background:var(--bg);
+  font-family:'Exo 2',sans-serif;
+  overflow:hidden;
+  color:var(--white);
+}
+#canvas-bg { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.grid-overlay {
+  position:fixed; inset:0; z-index:1;
+  background-image: linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;
+}
+.vignette {
+  position:fixed; inset:0; z-index:2;
+  background:radial-gradient(ellipse at center, transparent 40%, rgba(2,8,16,0.85) 100%);
+  pointer-events:none;
+}
+/* El resto de tu CSS original (exacto) */
+#presentation { position:relative; z-index:10; width:100vw; height:100vh; overflow:hidden; }
+/* ... (todas las clases .slide, .slide-1, .item-card, etc. que ya tenías) ... */
+</style>
+</head>
+<body>
+
+<canvas id="canvas-bg"></canvas>
+<div class="grid-overlay"></div>
+<div class="vignette"></div>
+<div id="progress-bar"></div>
+<div id="slide-counter">SLIDE <span id="current-slide">01</span> / <span>06</span></div>
+<div id="logo">Rebuild Digital Labs</div>
+<button id="autoplay-btn" title="Autoplay">▶</button>
+
+<div id="presentation">
+  <!-- TODOS TUS 6 SLIDES (exactamente como los tenías) -->
+  <!-- SLIDE 1, 2, 3, 4, 5 y 6 -->
+  <!-- (copiá y pegá aquí todo el contenido de los slides que me mandaste) -->
+</div>
+
+<!-- NAVIGATION -->
+<div id="nav">
+  <button class="nav-btn" id="prev-btn">←</button>
+  <div class="nav-dots" id="nav-dots"></div>
+  <button class="nav-btn" id="next-btn">→</button>
+</div>
+
+<script>
+/* === TODO EL JAVASCRIPT COMPLETO Y CORREGIDO === */
+const SLIDE_COUNT = 6;
+const AUTO_INTERVAL = 7000;
+let current = 0;
+let autoplay = false;
+let timer = null;
+
+const slides = document.querySelectorAll('.slide');
+const dotsContainer = document.getElementById('nav-dots');
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const autoBtn = document.getElementById('autoplay-btn');
+const progressBar = document.getElementById('progress-bar');
+const currentLabel = document.getElementById('current-slide');
+
+for(let i=0;i<SLIDE_COUNT;i++){
+  const d = document.createElement('button');
+  d.className = 'nav-dot' + (i===0?' active':'');
+  d.onclick = () => goTo(i);
+  dotsContainer.appendChild(d);
+}
+
+function pad(n){ return n<10?'0'+n:String(n); }
+
+function goTo(n){
+  if(n===current) return;
+  const old = current;
+  slides[old].classList.remove('active');
+  slides[old].classList.add('exit');
+  setTimeout(()=>{ slides[old].classList.remove('exit'); }, 900);
+  current = ((n % SLIDE_COUNT) + SLIDE_COUNT) % SLIDE_COUNT;
+  slides[current].classList.add('active');
+  document.querySelectorAll('.nav-dot').forEach((d,i)=>{ d.classList.toggle('active', i===current); });
+  currentLabel.textContent = pad(current+1);
+  prevBtn.disabled = current===0;
+  nextBtn.disabled = current===SLIDE_COUNT-1;
+}
+
+prevBtn.onclick = () => { stopAutoplay(); goTo(current-1); };
+nextBtn.onclick = () => { stopAutoplay(); goTo(current+1); };
+prevBtn.disabled = true;
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') { stopAutoplay(); goTo(current+1); }
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') { stopAutoplay(); goTo(current-1); }
+  if(e.key===' ') { e.preventDefault(); toggleAutoplay(); }
+});
+
+let touchX = null;
+document.addEventListener('touchstart', e=>{ touchX = e.touches[0].clientX; });
+document.addEventListener('touchend', e=>{
+  if(touchX===null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if(Math.abs(dx)>50){ stopAutoplay(); goTo(dx<0?current+1:current-1); }
+  touchX=null;
+});
+
+function startProgressAnim(){
+  progressBar.style.transition = 'none';
+  progressBar.style.width = '0%';
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ 
+    progressBar.style.transition = `width ${AUTO_INTERVAL}ms linear`;
+    progressBar.style.width = '100%';
+  }); });
+}
+
+function stopProgressAnim(){
+  progressBar.style.transition = 'none';
+  progressBar.style.width = '0%';
+}
+
+function startAutoplay(){
+  autoplay = true;
+  autoBtn.textContent = '⏸';
+  autoBtn.title = 'Pause';
+  startProgressAnim();
+  timer = setInterval(()=>{
+    if(current === SLIDE_COUNT-1){ stopAutoplay(); goTo(0); return; }
+    goTo(current+1);
+    startProgressAnim();
+  }, AUTO_INTERVAL);
+}
+
+function stopAutoplay(){
+  autoplay = false;
+  autoBtn.textContent = '▶';
+  autoBtn.title = 'Autoplay';
+  clearInterval(timer);
+  stopProgressAnim();
+}
+
+function toggleAutoplay(){
+  if(autoplay) stopAutoplay(); else startAutoplay();
+}
+
+autoBtn.onclick = toggleAutoplay;
+
+// === CANVAS PARTICLES (CORREGIDO Y COMPLETO) ===
+const canvas = document.getElementById('canvas-bg');
+const ctx = canvas.getContext('2d');
+let W, H, particles=[];
+
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+class Particle {
+  constructor(){
+    this.x = Math.random()*W;
+    this.y = Math.random()*H;
+    this.vx = (Math.random()-0.5)*0.3;
+    this.vy = (Math.random()-0.5)*0.3;
+    this.r = Math.random()*1.5+0.3;
+    this.alpha = Math.random()*0.5+0.1;
+    this.c = Math.random()<0.7?'0,229,255':'0,102,255';
+  }
+  update(){
+    this.x += this.vx; this.y += this.vy;
+    if(this.x<0||this.x>W) this.vx*=-1;
+    if(this.y<0||this.y>H) this.vy*=-1;
+  }
+  draw(){
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle = `rgba(${this.c},${this.alpha})`;
+    ctx.fill();
+  }
+}
+
+for(let i=0;i<120;i++) particles.push(new Particle());
+
+function drawConnections(){
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x;
+      const dy=particles[i].y-particles[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x,particles[i].y);
+        ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.strokeStyle=`rgba(0,229,255,${0.07*(1-d/120)})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate(){
+  ctx.clearRect(0,0,W,H);
+  for(let p of particles){
+    p.update();
+    p.draw();
+  }
+  drawConnections();
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
